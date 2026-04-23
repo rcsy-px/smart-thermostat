@@ -1,0 +1,359 @@
+:root {
+    --bg: #f3efe6;
+    --panel: rgba(255, 252, 247, 0.92);
+    --line: #d7c8b5;
+    --ink: #241b14;
+    --muted: #6a5a4d;
+    --accent: #b55233;
+    --accent-dark: #8f3d22;
+    --success: #2f7d4d;
+    --danger: #8a2d23;
+    --shadow: 0 18px 50px rgba(61, 35, 14, 0.12);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--ink);
+    background:
+        radial-gradient(circle at top left, rgba(181, 82, 51, 0.18), transparent 30%),
+        radial-gradient(circle at right, rgba(47, 125, 77, 0.14), transparent 24%),
+        linear-gradient(180deg, #f9f6ef 0%, var(--bg) 100%);
+}
+
+.page-shell {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+}
+
+.hero,
+.panel,
+.stat-card {
+    border: 1px solid rgba(106, 90, 77, 0.15);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: end;
+    border-radius: 28px;
+    padding: 28px;
+    margin-bottom: 24px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+h1,
+h2,
+h3,
+p {
+    margin-top: 0;
+}
+
+h1 {
+    margin-bottom: 10px;
+    font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.lede {
+    max-width: 720px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.stats-grid,
+.panel-grid {
+    display: grid;
+    gap: 18px;
+}
+
+.stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-bottom: 18px;
+}
+
+.stat-card {
+    border-radius: 22px;
+    padding: 18px 20px;
+}
+
+.stat-card span {
+    display: block;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.stat-card strong {
+    font-size: 2rem;
+}
+
+.panel-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.panel,
+.single-panel {
+    border-radius: 28px;
+    padding: 24px;
+}
+
+.panel-header,
+.room-card-top,
+.actions,
+.runtime-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.95rem;
+    color: var(--muted);
+}
+
+input {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--ink);
+    font: inherit;
+}
+
+select {
+    width: 100%;
+    padding: 11px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--ink);
+    font: inherit;
+}
+
+.toggle {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    color: var(--ink);
+}
+
+.toggle input {
+    width: auto;
+}
+
+.primary-button,
+.danger-button,
+.secondary-link,
+.secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    font: inherit;
+    text-decoration: none;
+}
+
+.primary-button,
+.danger-button,
+.secondary-button {
+    border: none;
+    cursor: pointer;
+}
+
+.primary-button {
+    background: var(--accent);
+    color: #fff9f5;
+}
+
+.primary-button:hover {
+    background: var(--accent-dark);
+}
+
+.secondary-link {
+    color: var(--accent-dark);
+    border: 1px solid rgba(181, 82, 51, 0.26);
+}
+
+.secondary-button {
+    background: rgba(181, 82, 51, 0.12);
+    color: var(--accent-dark);
+}
+
+.danger-button {
+    background: rgba(138, 45, 35, 0.1);
+    color: var(--danger);
+}
+
+.room-list {
+    display: grid;
+    gap: 14px;
+}
+
+.room-card {
+    padding: 18px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(106, 90, 77, 0.14);
+}
+
+.badge {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.badge-live {
+    background: rgba(47, 125, 77, 0.14);
+    color: var(--success);
+}
+
+.badge-muted {
+    background: rgba(106, 90, 77, 0.12);
+    color: var(--muted);
+}
+
+.room-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin: 18px 0;
+}
+
+.room-metrics dt {
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.room-metrics dd {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.entity-line,
+.empty-state,
+.runtime-strip {
+    color: var(--muted);
+}
+
+.single-panel {
+    max-width: 920px;
+}
+
+.inline-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.detail-card {
+    padding: 18px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(106, 90, 77, 0.14);
+}
+
+.event-list {
+    display: grid;
+    gap: 12px;
+}
+
+.event-row {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.debug-panel {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.45);
+    border: 1px solid rgba(106, 90, 77, 0.14);
+}
+
+.chart-card {
+    margin-top: 16px;
+}
+
+.trend-chart {
+    width: 100%;
+    height: 220px;
+    border-radius: 16px;
+    background:
+        linear-gradient(to top, rgba(181, 82, 51, 0.08), rgba(181, 82, 51, 0.02)),
+        repeating-linear-gradient(
+            to top,
+            transparent 0,
+            transparent 43px,
+            rgba(106, 90, 77, 0.12) 44px
+        );
+}
+
+.trend-chart polyline {
+    fill: none;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.trend-chart .temp-line {
+    stroke: var(--accent);
+}
+
+.trend-chart .setpoint-line {
+    stroke: var(--success);
+    stroke-dasharray: 4 3;
+}
+
+@media (max-width: 900px) {
+    .hero,
+    .panel-header,
+    .runtime-strip,
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+}

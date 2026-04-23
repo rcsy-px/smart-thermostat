@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="hu">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Thermostat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div>
+                <p class="eyebrow">Smart Thermostat</p>
+                <h1>Flask alapú hovezerles</h1>
+                <p class="lede">Dinamikus szobakezeles, Home Assistant integracio es kesobbi zonalogika egy uj, modulos alapon.</p>
+            </div>
+            <form method="post" action="{{ url_for('web.sample_controller') }}">
+                <button class="primary-button" type="submit">Mintavetel a HA-bol</button>
+            </form>
+        </header>
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="stats-grid">
+    <article class="stat-card">
+        <span>Szobak</span>
+        <strong>{{ room_count }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Aktiv szobak</span>
+        <strong>{{ active_room_count }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Futest kernek</span>
+        <strong>{{ demanding_room_count }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Learning debug</span>
+        <strong>{{ "ON" if runtime.learning_debug_enabled else "OFF" }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Controller</span>
+        <strong>{{ (runtime.last_controller_status or "idle")|upper }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Uzemmod</span>
+        <strong>
+            {% if single_room_mode %}SIMPLE{% elif multi_room_feature_enabled %}MULTI{% else %}SIMPLE{% endif %}
+        </strong>
+    </article>
+    <article class="stat-card">
+        <span>HVAC mode</span>
+        <strong>{{ (runtime.hvac_mode or "heat")|upper }}</strong>
+    </article>
+    <article class="stat-card">
+        <span>Cooling call</span>
+        <strong>{{ "ON" if runtime.cooling_call else "OFF" }}</strong>
+    </article>
+</section>
+
+<section class="panel-grid">
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Rendszer</p>
+                <h2>Home Assistant kapcsolat</h2>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('web.update_settings') }}" class="form-grid">
+            <label>
+                HA base URL
+                <input type="text" name="ha_base_url" value="{{ settings.ha_base_url or '' }}" required>
+            </label>
+            <label>
+                Long-lived token
+                <input type="password" name="ha_token" value="{{ settings.ha_token or '' }}">
+            </label>
+            <label>
+                Kulso homerseklet input_number
+                <input type="text" name="outdoor_entity_id" value="{{ settings.outdoor_entity_id or '' }}">
+            </label>
+            <label>
+                HVAC mode input_text
+                <input type="text" name="hvac_mode_entity_id" value="{{ settings.hvac_mode_entity_id or '' }}">
+            </label>
+            <label>
+                Controller ciklus (mp)
+                <input type="number" name="controller_interval_seconds" min="5" value="{{ settings.controller_interval_seconds or '30' }}">
+            </label>
+            <label class="toggle">
+                <input type="checkbox" name="controller_enabled" {% if runtime.controller_enabled %}checked{% endif %}>
+                Controller aktiv
+            </label>
+            <label class="toggle">
+                <input type="checkbox" name="learning_debug_enabled" {% if runtime.learning_debug_enabled %}checked{% endif %}>
+                Learning debug aktiv
+            </label>
+            <label class="toggle">
+                <input type="checkbox" name="feature_multi_room_logic" {% if settings.feature_multi_room_logic == '1' %}checked{% endif %} {% if single_room_mode %}disabled{% endif %}>
+                Multi-room logika
+            </label>
+            <label class="toggle">
+                <input type="checkbox" name="feature_predictive_cutoff" {% if settings.feature_predictive_cutoff == '1' %}checked{% endif %} {% if single_room_mode %}disabled{% endif %}>
+                Prediktiv cutoff
+            </label>
+            <button class="primary-button" type="submit">Beallitasok mentese</button>
+        </form>
+        <div class="runtime-strip">
+            <span>Utolso futas: {{ runtime.last_controller_run_at or "meg nem futott" }}</span>
+            <span>Statusz: {{ runtime.last_controller_status or "idle" }}</span>
+            <span>Hiba: {{ runtime.last_controller_error or "nincs" }}</span>
+        </div>
+        <div class="runtime-strip">
+            <span>Multi-room feature: {{ "ON" if multi_room_feature_enabled else "OFF" }}</span>
+            <span>Predictive cutoff: {{ "ON" if predictive_cutoff_feature_enabled else "OFF" }}</span>
+            <span>Aktiv mod: {% if single_room_mode %}simple, 1 szoba{% elif multi_room_feature_enabled %}multi-room{% else %}simple, feature off{% endif %}</span>
+        </div>
+        <div class="runtime-strip">
+            <span>HVAC: {{ (runtime.hvac_mode or "heat")|upper }}</span>
+            <span>Atlag homerseklet: {{ "%.2f C"|format(runtime.average_temperature) if runtime.average_temperature is not none else "n/a" }}</span>
+            <span>Atlag setpoint: {{ "%.2f C"|format(runtime.average_setpoint) if runtime.average_setpoint is not none else "n/a" }}</span>
+        </div>
+        {% if single_room_mode %}
+        <p class="empty-state">A tobbszobas funkciok automatikusan keszenleti modban vannak, amig csak 1 aktiv szoba letezik.</p>
+        {% endif %}
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Kazan modul</p>
+                <h2>{{ boiler.name }}</h2>
+            </div>
+        </div>
+        <form method="post" action="{{ url_for('web.update_boiler') }}" class="form-grid">
+            <label>
+                Nev
+                <input type="text" name="name" value="{{ boiler.name }}" required>
+            </label>
+            <label>
+                Futes input_boolean
+                <input type="text" name="heating_entity_id" value="{{ boiler.heating_entity_id }}" required>
+            </label>
+            <label>
+                Szivattyu input_boolean
+                <input type="text" name="pump_entity_id" value="{{ boiler.pump_entity_id }}" required>
+            </label>
+            <label>
+                Pumpa utofutas (perc)
+                <input type="number" name="pump_overrun_minutes" min="0" value="{{ boiler.pump_overrun_minutes }}" required>
+            </label>
+            <label class="toggle">
+                <input type="checkbox" name="enabled" {% if boiler.enabled %}checked{% endif %}>
+                Engedelyezett
+            </label>
+            <button class="primary-button" type="submit">Kazan mentes</button>
+        </form>
+        <div class="runtime-strip">
+            <span>Kazan allapot: {{ "ON" if runtime.boiler_heating_state else "OFF" }}</span>
+            <span>Szivattyu: {{ "ON" if runtime.boiler_pump_state else "OFF" }}</span>
+            <span>Lejarat: {{ runtime.pump_countdown_target_at or "nincs" }}</span>
+        </div>
+        <form method="post" action="{{ url_for('web.boiler_override') }}" class="inline-form">
+            <label>
+                Kazan override
+                <select name="mode">
+                    <option value="auto" {% if runtime.boiler_manual_override_mode == 'auto' %}selected{% endif %}>Auto</option>
+                    <option value="force_on" {% if runtime.boiler_manual_override_mode == 'force_on' %}selected{% endif %}>Force ON</option>
+                    <option value="force_off" {% if runtime.boiler_manual_override_mode == 'force_off' %}selected{% endif %}>Force OFF</option>
+                </select>
+            </label>
+            <label>
+                Idotartam (perc)
+                <input type="number" name="duration_minutes" min="1" value="60">
+            </label>
+            <button class="secondary-button" type="submit">Override mentese</button>
+        </form>
+        <p class="entity-line">Aktiv override: {{ runtime.boiler_manual_override_mode or "auto" }} / {{ runtime.boiler_manual_override_until or "nincs" }}</p>
+    </article>
+
+    <article class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Szobak</p>
+                <h2>Dinamikus lista</h2>
+            </div>
+            <a class="secondary-link" href="{{ url_for('web.create_room') }}">Uj szoba</a>
+        </div>
+        <div class="room-list">
+            {% for room in rooms %}
+            <article class="room-card">
+                <div class="room-card-top">
+                    <div>
+                        <h3>{{ room.name }}</h3>
+                <p>{{ room.slug }}</p>
+                    </div>
+                    <span class="badge {{ 'badge-live' if room.enabled else 'badge-muted' }}">
+                        {{ "aktiv" if room.enabled else "tiltva" }}
+                    </span>
+                </div>
+                <dl class="room-metrics">
+                    <div>
+                        <dt>Homerseklet</dt>
+                        <dd>{{ "%.2f"|format(room.last_temperature) ~ " C" if room.last_temperature is not none else "n/a" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Setpoint</dt>
+                        <dd>{{ "%.2f"|format(room.last_setpoint) ~ " C" if room.last_setpoint is not none else room.setpoint_entity_id }}</dd>
+                    </div>
+                    <div>
+                        <dt>Hiszterezis</dt>
+                        <dd>{{ "%.2f"|format(room.last_hysteresis) ~ " C" if room.last_hysteresis is not none else room.hysteresis_entity_id }}</dd>
+                    </div>
+                    <div>
+                        <dt>Futes igeny</dt>
+                        <dd>{{ "igen" if room.last_call_for_heat else "nem" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Szelep</dt>
+                        <dd>{{ "nyitva" if room.last_valve_open else "zarva" }}</dd>
+                    </div>
+                </dl>
+                <p class="entity-line">Szenzor: {{ room.temperature_entity_id }}</p>
+                <p class="entity-line">Szelep: {{ room.valve_entity_id }}</p>
+                <p class="entity-line">Cirkadian boolean: {{ room.circadian_enabled_entity_id or "nincs" }}</p>
+                <p class="entity-line">Idozites: {{ room.circadian_night_start }} / {{ room.circadian_morning_start }}</p>
+                <p class="entity-line">Controller dontes: {{ room.last_decision_reason or "meg nincs" }}</p>
+                <p class="entity-line">Manual override: {{ room.manual_override_mode }} / {{ room.manual_override_until or "nincs" }}</p>
+                <div class="actions">
+                    <a class="secondary-link" href="{{ url_for('web.room_detail', room_id=room.id) }}">Reszletek</a>
+                    <a class="secondary-link" href="{{ url_for('web.edit_room', room_id=room.id) }}">Szerkesztes</a>
+                    <form method="post" action="{{ url_for('web.delete_room', room_id=room.id) }}">
+                        <button class="danger-button" type="submit">Torles</button>
+                    </form>
+                </div>
+            </article>
+            {% else %}
+            <p class="empty-state">Meg nincs egyetlen szoba sem. Az elso szobat a webes feluleten tudod felvenni.</p>
+            {% endfor %}
+        </div>
+        {% if runtime.last_controller_snapshot %}
+        <div class="debug-panel">
+            <h3>Utolso controller kor</h3>
+            <p class="entity-line">Boiler should heat: {{ "igen" if runtime.last_controller_snapshot.boiler_should_heat else "nem" }}</p>
+            <p class="entity-line">Pump should run: {{ "igen" if runtime.last_controller_snapshot.pump_should_run else "nem" }}</p>
+            <p class="entity-line">HVAC mode: {{ runtime.last_controller_snapshot.hvac_mode|upper }}</p>
+            <p class="entity-line">Cooling call: {{ "igen" if runtime.last_controller_snapshot.cooling_call else "nem" }}</p>
+            <p class="entity-line">Outdoor temperature: {{ runtime.last_controller_snapshot.outdoor_temperature if runtime.last_controller_snapshot.outdoor_temperature is not none else "n/a" }}</p>
+            <div class="event-list">
+                {% for sample in runtime.last_controller_snapshot.room_samples %}
+                <div class="event-row">
+                    <strong>{{ sample.name }}</strong>
+                    <span>Call for heat: {{ "igen" if sample.call_for_heat else "nem" }}</span>
+                    <span>Valve open: {{ "igen" if sample.valve_open else "nem" }}</span>
+                    <span>Decision: {{ sample.decision_reason }}</span>
+                    <span>Error: {{ sample.error or "nincs" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

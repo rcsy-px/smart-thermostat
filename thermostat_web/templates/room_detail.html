@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel single-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Szoba reszletek</p>
+            <h2>{{ room.name }}</h2>
+        </div>
+        <div class="actions">
+            <a class="secondary-link" href="{{ url_for('web.edit_room', room_id=room.id) }}">Szerkesztes</a>
+            <a class="secondary-link" href="{{ url_for('web.dashboard') }}">Vissza</a>
+        </div>
+    </div>
+
+    <section class="stats-grid room-detail-grid">
+        <article class="stat-card">
+            <span>Utolso homerseklet</span>
+            <strong>{{ "%.2f"|format(room.last_temperature) ~ " C" if room.last_temperature is not none else "n/a" }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Utolso setpoint</span>
+            <strong>{{ "%.2f"|format(room.last_setpoint) ~ " C" if room.last_setpoint is not none else "n/a" }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Futes igeny</span>
+            <strong>{{ "igen" if room.last_call_for_heat else "nem" }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Szelep allapot</span>
+            <strong>{{ "nyitva" if room.last_valve_open else "zarva" }}</strong>
+        </article>
+        <article class="stat-card">
+            <span>Utolso mintavetel</span>
+            <strong>{{ room.last_sample_at or "n/a" }}</strong>
+        </article>
+    </section>
+
+    <div class="detail-grid">
+        <article class="detail-card">
+            <h3>Entity mapping</h3>
+            <p>Homerseklet: {{ room.temperature_entity_id }}</p>
+            <p>Szelep: {{ room.valve_entity_id }}</p>
+            <p>Setpoint: {{ room.setpoint_entity_id }}</p>
+            <p>Hiszterezis: {{ room.hysteresis_entity_id }}</p>
+            <p>Cirkadian boolean: {{ room.circadian_enabled_entity_id or "nincs" }}</p>
+            <p>Idoszakok: ejjel {{ room.circadian_night_start }}, reggel {{ room.circadian_morning_start }}</p>
+            <p>Utolso controller dontes: {{ room.last_decision_reason or "meg nincs" }}</p>
+            <p>Manual override: {{ room.manual_override_mode }} / {{ room.manual_override_until or "nincs" }}</p>
+        </article>
+        <article class="detail-card">
+            <h3>Kezd manual override</h3>
+            <form method="post" action="{{ url_for('web.room_override', room_id=room.id) }}" class="inline-form">
+                <label>
+                    Mod
+                    <select name="mode">
+                        <option value="auto" {% if room.manual_override_mode == 'auto' %}selected{% endif %}>Auto</option>
+                        <option value="force_open" {% if room.manual_override_mode == 'force_open' %}selected{% endif %}>Force open</option>
+                        <option value="force_closed" {% if room.manual_override_mode == 'force_closed' %}selected{% endif %}>Force closed</option>
+                    </select>
+                </label>
+                <label>
+                    Idotartam (perc)
+                    <input type="number" name="duration_minutes" min="1" value="60">
+                </label>
+                <button class="secondary-button" type="submit">Override mentese</button>
+            </form>
+        </article>
+        <article class="detail-card">
+            <h3>Tanulasi esemenyek</h3>
+            {% if events %}
+            <div class="event-list">
+                {% for event in events %}
+                <div class="event-row">
+                    <strong>{{ event.event_type }}</strong>
+                    <span>{{ event.created_at }}</span>
+                    <span>Kulso: {{ event.outdoor_temperature if event.outdoor_temperature is not none else "n/a" }}</span>
+                    <span>Szoba: {{ event.room_temperature if event.room_temperature is not none else "n/a" }}</span>
+                    <span>Setpoint: {{ event.setpoint if event.setpoint is not none else "n/a" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="empty-state">Meg nincs rogzitett learning esemeny ehhez a szobahoz.</p>
+            {% endif %}
+        </article>
+    </div>
+
+    <article class="detail-card chart-card">
+        <h3>Homerseklet trend</h3>
+        {% if chart_points %}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="trend-chart" aria-label="Homerseklet trend">
+            <polyline class="temp-line" points="{{ chart_points }}" />
+            {% if setpoint_chart_points %}
+            <polyline class="setpoint-line" points="{{ setpoint_chart_points }}" />
+            {% endif %}
+        </svg>
+        {% else %}
+        <p class="empty-state">Meg nincs eleg adat a trend megjelenitesehez.</p>
+        {% endif %}
+    </article>
+
+    <article class="detail-card">
+        <h3>Utolso mintak</h3>
+        {% if samples %}
+        <div class="event-list">
+            {% for sample in samples[-12:]|reverse %}
+            <div class="event-row">
+                <strong>{{ sample.sampled_at }}</strong>
+                <span>T: {{ sample.temperature if sample.temperature is not none else "n/a" }}</span>
+                <span>SP: {{ sample.effective_setpoint if sample.effective_setpoint is not none else "n/a" }}</span>
+                <span>Hiszterezis: {{ sample.hysteresis if sample.hysteresis is not none else "n/a" }}</span>
+                <span>Futes: {{ "igen" if sample.call_for_heat else "nem" }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">Meg nincs rogzitett mintavetel.</p>
+        {% endif %}
+    </article>
+
+    <article class="detail-card">
+        <h3>Learning profilok</h3>
+        {% if profiles %}
+        <div class="event-list">
+            {% for profile in profiles %}
+            <div class="event-row">
+                <strong>{{ profile.outdoor_bin }}</strong>
+                <span>ON esemenyek: {{ profile.heat_on_events }}</span>
+                <span>Atlagos futesi ido: {{ "%.0f mp"|format(profile.avg_heat_on_seconds) if profile.avg_heat_on_seconds is not none else "n/a" }}</span>
+                <span>Overshoot esemenyek: {{ profile.heat_off_events }}</span>
+                <span>Atlagos overshoot: {{ "%.2f C"|format(profile.avg_overshoot) if profile.avg_overshoot is not none else "n/a" }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">Meg nincs eleg learning adat ehhez a szobahoz.</p>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

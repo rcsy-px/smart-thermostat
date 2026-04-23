@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel single-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Szoba szerkesztes</p>
+            <h2>{{ room.name if room else "Uj szoba" }}</h2>
+        </div>
+        <a class="secondary-link" href="{{ url_for('web.dashboard') }}">Vissza</a>
+    </div>
+    <form method="post" class="form-grid">
+        <label>
+            Szoba neve
+            <input type="text" name="name" value="{{ room.name if room else '' }}" required>
+        </label>
+        <label>
+            Homerseklet input_number
+            <input type="text" name="temperature_entity_id" value="{{ room.temperature_entity_id if room else '' }}" required>
+        </label>
+        <label>
+            Szelep input_boolean
+            <input type="text" name="valve_entity_id" value="{{ room.valve_entity_id if room else '' }}" required>
+        </label>
+        <label>
+            Setpoint input_number
+            <input type="text" name="setpoint_entity_id" value="{{ room.setpoint_entity_id if room else '' }}" required>
+        </label>
+        <label>
+            Hiszterezis input_number
+            <input type="text" name="hysteresis_entity_id" value="{{ room.hysteresis_entity_id if room else '' }}" required>
+        </label>
+        <label>
+            Cirkadian enable input_boolean
+            <input type="text" name="circadian_enabled_entity_id" value="{{ room.circadian_enabled_entity_id if room else '' }}">
+        </label>
+        <label>
+            Ejjeli kezdes
+            <input type="time" name="circadian_night_start" value="{{ room.circadian_night_start if room else '22:00' }}">
+        </label>
+        <label>
+            Reggeli kezdes
+            <input type="time" name="circadian_morning_start" value="{{ room.circadian_morning_start if room else '05:30' }}">
+        </label>
+        <label>
+            Ejjeli delta (C)
+            <input type="number" step="0.1" name="circadian_night_delta" value="{{ room.circadian_night_delta if room else '0.0' }}">
+        </label>
+        <label>
+            Reggeli delta (C)
+            <input type="number" step="0.1" name="circadian_morning_delta" value="{{ room.circadian_morning_delta if room else '0.0' }}">
+        </label>
+        <label class="toggle">
+            <input type="checkbox" name="enabled" {% if not room or room.enabled %}checked{% endif %}>
+            Szoba aktiv
+        </label>
+        <label class="toggle">
+            <input type="checkbox" name="learning_enabled" {% if room and room.learning_enabled %}checked{% endif %}>
+            Self-learning debug
+        </label>
+        <button class="primary-button" type="submit">Mentes</button>
+    </form>
+</section>
+{% endblock %}
