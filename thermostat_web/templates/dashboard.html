@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="stats-grid">
+<section class="stats-grid dashboard-stats">
     <article class="stat-card">
         <span>Szobak</span>
         <strong>{{ room_count }}</strong>
@@ -38,7 +38,7 @@
     </article>
 </section>
 
-<section class="panel-grid">
+<section class="panel-grid dashboard-panels">
     <article class="panel">
         <div class="panel-header">
             <div>
@@ -168,7 +168,7 @@
         </div>
         <div class="room-list">
             {% for room in rooms %}
-            <article class="room-card">
+            <article class="room-card glass-card">
                 <div class="room-card-top">
                     <div>
                         <h3>{{ room.name }}</h3>

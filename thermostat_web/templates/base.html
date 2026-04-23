@@ -7,14 +7,22 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+    <div class="ambient-grid"></div>
     <div class="page-shell">
         <header class="hero">
-            <div>
+            <div class="hero-copy">
                 <p class="eyebrow">Smart Thermostat</p>
-                <h1>Flask alapú hovezerles</h1>
-                <p class="lede">Dinamikus szobakezeles, Home Assistant integracio es kesobbi zonalogika egy uj, modulos alapon.</p>
+                <h1>Hazautomatizalt HVAC vezerles</h1>
+                <p class="lede">Modern, webes termosztat dashboard Home Assistant integracioval, szobankenti logikaval, trendekkel es bovitheto zonakezelessel.</p>
             </div>
-            <form method="post" action="{{ url_for('web.sample_controller') }}">
+            <div class="hero-actions">
+                <div class="hero-pill">Flask</div>
+                <div class="hero-pill">SQLite</div>
+                <div class="hero-pill">Home Assistant</div>
+            </div>
+            <form method="post" action="{{ url_for('web.sample_controller') }}" class="hero-form">
                 <button class="primary-button" type="submit">Mintavetel a HA-bol</button>
             </form>
         </header>
