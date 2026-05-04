@@ -38,7 +38,7 @@
     </article>
 </section>
 
-<section class="panel-grid dashboard-panels">
+<section class="panel-grid dashboard-panels dashboard-config">
     <article class="panel">
         <div class="panel-header">
             <div>
@@ -158,7 +158,107 @@
         <p class="entity-line">Aktiv override: {{ runtime.boiler_manual_override_mode or "auto" }} / {{ runtime.boiler_manual_override_until or "nincs" }}</p>
     </article>
 
-    <article class="panel">
+</section>
+
+<section class="panel floorplan-panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Floorplanes</p>
+            <h2>Alaprajz nezet</h2>
+        </div>
+        <a class="secondary-link" href="{{ url_for('web.create_room') }}">Uj szoba</a>
+    </div>
+
+    <div class="floorplan-layout">
+        <div>
+            <div id="floorplanCanvas" class="floorplan-canvas" aria-label="Floorplanes szerkeszto">
+                {% for zone in floorplan_zones %}
+                {% set zone_title = zone.room_name or zone.name or "Nincs szoba" %}
+                <button
+                    type="button"
+                    class="floor-zone {{ 'is-bound' if zone.room_id else 'is-open' }} {{ 'is-heating' if zone.last_call_for_heat else '' }} {{ 'is-disabled' if zone.room_id and not zone.room_enabled else '' }}"
+                    data-zone-id="{{ zone.id }}"
+                    data-name="{{ zone.name }}"
+                    data-room-id="{{ zone.room_id or '' }}"
+                    data-x="{{ zone.x }}"
+                    data-y="{{ zone.y }}"
+                    data-width="{{ zone.width }}"
+                    data-height="{{ zone.height }}"
+                    style="left: {{ zone.x }}%; top: {{ zone.y }}%; width: {{ zone.width }}%; height: {{ zone.height }}%;"
+                >
+                    <span class="zone-title">{{ zone_title }}</span>
+                    {% if zone.room_id %}
+                    <span class="zone-metrics">
+                        <strong>{{ "%.1f"|format(zone.last_temperature) ~ " C" if zone.last_temperature is not none else "n/a" }}</strong>
+                        <small>{{ "%.1f"|format(zone.last_setpoint) ~ " C" if zone.last_setpoint is not none else "setpoint n/a" }}</small>
+                    </span>
+                    <span class="zone-status-row">
+                        <span class="status-dot {{ 'dot-heat' if zone.last_call_for_heat else 'dot-idle' }}"></span>
+                        {{ "futest ker" if zone.last_call_for_heat else "nyugalomban" }}
+                    </span>
+                    <span class="zone-status-row">
+                        <span class="status-dot {{ 'dot-open' if zone.last_valve_open else 'dot-closed' }}"></span>
+                        {{ "szelep nyitva" if zone.last_valve_open else "szelep zarva" }}
+                    </span>
+                    {% else %}
+                    <span class="zone-status-row">
+                        <span class="status-dot dot-unbound"></span>
+                        nincs vezerelt szoba
+                    </span>
+                    {% endif %}
+                    <span class="resize-handle resize-nw" data-resize="nw"></span>
+                    <span class="resize-handle resize-ne" data-resize="ne"></span>
+                    <span class="resize-handle resize-se" data-resize="se"></span>
+                    <span class="resize-handle resize-sw" data-resize="sw"></span>
+                </button>
+                {% endfor %}
+            </div>
+            <div class="floorplan-hint">
+                <span>Rajzolas: huzd az egeret a racson.</span>
+                <span>Mozgatas: fogd meg a teglalapot. Atmeretezes: fogd meg a sarkat.</span>
+                <span>A valtozasok csak menteskor kerulnek adatbazisba.</span>
+            </div>
+        </div>
+
+        <aside class="floorplan-editor">
+            <div>
+                <p class="eyebrow">Szerkeszto</p>
+                <h3 id="floorplanEditorTitle">Uj teglalap</h3>
+                <p class="entity-line">A hall vagy egyeb nem vezerelt terulet maradhat szoba nelkul.</p>
+            </div>
+            <form id="floorplanForm" method="post" action="{{ url_for('web.create_floorplan_zone') }}" class="form-grid compact-form">
+                <label>
+                    Megnevezes
+                    <input type="text" name="name" id="zoneName" placeholder="pl. Hall, Nappali zona">
+                </label>
+                <label>
+                    Szoba
+                    <select name="room_id" id="zoneRoomId">
+                        <option value="">Nincs hozzarendelve</option>
+                        {% for room in rooms %}
+                        <option value="{{ room.id }}">{{ room.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <div class="coordinate-grid">
+                    <label>X<input type="number" step="0.1" min="0" max="100" name="x" id="zoneX" value="8"></label>
+                    <label>Y<input type="number" step="0.1" min="0" max="100" name="y" id="zoneY" value="8"></label>
+                    <label>W<input type="number" step="0.1" min="2" max="100" name="width" id="zoneWidth" value="24"></label>
+                    <label>H<input type="number" step="0.1" min="2" max="100" name="height" id="zoneHeight" value="18"></label>
+                </div>
+                <button class="primary-button" type="submit">Kijelolt mentese</button>
+            </form>
+            <button id="saveAllZonesButton" class="primary-button" type="button">Osszes modositas mentese</button>
+            <p id="floorplanSaveStatus" class="save-status">Nincs mentetlen modositas.</p>
+            <form id="floorplanDeleteForm" method="post" action="" class="delete-zone-form hidden">
+                <button class="danger-button" type="submit">Teglalap torlese</button>
+            </form>
+            <button id="newZoneButton" class="secondary-button" type="button">Uj teglalap mod</button>
+        </aside>
+    </div>
+</section>
+
+<section class="panel full-width-panel room-management-panel">
         <div class="panel-header">
             <div>
                 <p class="eyebrow">Szobak</p>
@@ -239,6 +339,461 @@
             </div>
         </div>
         {% endif %}
-    </article>
 </section>
+
+<script>
+(() => {
+    const canvas = document.getElementById("floorplanCanvas");
+    const form = document.getElementById("floorplanForm");
+    const deleteForm = document.getElementById("floorplanDeleteForm");
+    const title = document.getElementById("floorplanEditorTitle");
+    const newButton = document.getElementById("newZoneButton");
+    const saveAllButton = document.getElementById("saveAllZonesButton");
+    const saveStatus = document.getElementById("floorplanSaveStatus");
+    const fields = {
+        name: document.getElementById("zoneName"),
+        roomId: document.getElementById("zoneRoomId"),
+        x: document.getElementById("zoneX"),
+        y: document.getElementById("zoneY"),
+        width: document.getElementById("zoneWidth"),
+        height: document.getElementById("zoneHeight"),
+    };
+    let draft = null;
+    let dragStart = null;
+    let activePointerId = null;
+    let resizingZone = null;
+    let resizeStart = null;
+
+    const createUrl = "{{ url_for('web.create_floorplan_zone') }}";
+    const updateTemplate = "{{ url_for('web.update_floorplan_zone', zone_id=0) }}";
+    const deleteTemplate = "{{ url_for('web.delete_floorplan_zone', zone_id=0) }}";
+    const bulkUpdateUrl = "{{ url_for('web.update_floorplan_zones') }}";
+    let movingZone = null;
+    let moveStart = null;
+    let movedDistance = 0;
+    const dirtyZones = new Set();
+    const minZoneSize = 3;
+
+    function roomName(roomId) {
+        const option = fields.roomId.querySelector(`option[value="${roomId}"]`);
+        return option ? option.textContent : "";
+    }
+
+    function zonePayload(zone) {
+        return {
+            id: zone.dataset.zoneId,
+            name: zone.dataset.name || "",
+            room_id: zone.dataset.roomId || "",
+            x: zone.dataset.x,
+            y: zone.dataset.y,
+            width: zone.dataset.width,
+            height: zone.dataset.height,
+        };
+    }
+
+    function updateSaveStatus(message) {
+        const count = dirtyZones.size;
+        saveStatus.textContent = message || (count ? `${count} mentetlen floorplan modositas.` : "Nincs mentetlen modositas.");
+        saveAllButton.disabled = count === 0;
+    }
+
+    function markDirty(zone) {
+        if (!zone || !zone.dataset.zoneId) {
+            return;
+        }
+        dirtyZones.add(zone.dataset.zoneId);
+        zone.classList.add("is-dirty");
+        updateSaveStatus();
+    }
+
+    function clearDirty(zone) {
+        if (!zone || !zone.dataset.zoneId) {
+            return;
+        }
+        dirtyZones.delete(zone.dataset.zoneId);
+        zone.classList.remove("is-dirty");
+        updateSaveStatus();
+    }
+
+    function currentZone() {
+        return document.querySelector(".floor-zone.is-selected");
+    }
+
+    function updateZoneLabel(zone) {
+        const titleNode = zone.querySelector(".zone-title");
+        if (!titleNode) {
+            return;
+        }
+        titleNode.textContent = roomName(zone.dataset.roomId) || zone.dataset.name || "Nincs szoba";
+    }
+
+    function addResizeHandles(zone) {
+        ["nw", "ne", "se", "sw"].forEach((corner) => {
+            const handle = document.createElement("span");
+            handle.className = `resize-handle resize-${corner}`;
+            handle.dataset.resize = corner;
+            zone.appendChild(handle);
+        });
+    }
+
+    function createZoneElement(payload) {
+        const zone = document.createElement("button");
+        zone.type = "button";
+        zone.className = `floor-zone ${payload.room_id ? "is-bound" : "is-open"}`;
+        zone.dataset.zoneId = payload.id;
+        zone.dataset.name = payload.name || "";
+        zone.dataset.roomId = payload.room_id || "";
+        zone.dataset.x = payload.x;
+        zone.dataset.y = payload.y;
+        zone.dataset.width = payload.width;
+        zone.dataset.height = payload.height;
+        zone.style.left = `${payload.x}%`;
+        zone.style.top = `${payload.y}%`;
+        zone.style.width = `${payload.width}%`;
+        zone.style.height = `${payload.height}%`;
+
+        const titleNode = document.createElement("span");
+        titleNode.className = "zone-title";
+        zone.appendChild(titleNode);
+
+        const status = document.createElement("span");
+        status.className = "zone-status-row";
+        const dot = document.createElement("span");
+        dot.className = "status-dot dot-unbound";
+        status.appendChild(dot);
+        status.appendChild(document.createTextNode(payload.room_id ? "uj hozzarendeles" : "nincs vezerelt szoba"));
+        zone.appendChild(status);
+
+        addResizeHandles(zone);
+        canvas.appendChild(zone);
+        updateZoneLabel(zone);
+        return zone;
+    }
+
+    function setModeNew(resetFields = true) {
+        form.action = createUrl;
+        deleteForm.action = "";
+        deleteForm.classList.add("hidden");
+        title.textContent = "Uj teglalap";
+        if (resetFields) {
+            fields.name.value = "";
+            fields.roomId.value = "";
+            fields.x.value = "8";
+            fields.y.value = "8";
+            fields.width.value = "24";
+            fields.height.value = "18";
+        }
+        document.querySelectorAll(".floor-zone.is-selected").forEach((zone) => zone.classList.remove("is-selected"));
+    }
+
+    function selectZone(zone) {
+        document.querySelectorAll(".floor-zone.is-selected").forEach((item) => item.classList.remove("is-selected"));
+        zone.classList.add("is-selected");
+        title.textContent = "Teglalap szerkesztese";
+        form.action = updateTemplate.replace("/0", `/${zone.dataset.zoneId}`);
+        deleteForm.action = deleteTemplate.replace("/0", `/${zone.dataset.zoneId}`);
+        deleteForm.classList.remove("hidden");
+        fields.name.value = zone.dataset.name || "";
+        fields.roomId.value = zone.dataset.roomId || "";
+        fields.x.value = zone.dataset.x;
+        fields.y.value = zone.dataset.y;
+        fields.width.value = zone.dataset.width;
+        fields.height.value = zone.dataset.height;
+    }
+
+    function applyZoneGeometry(zone, x, y, width, height, dirty = true) {
+        zone.style.left = `${x}%`;
+        zone.style.top = `${y}%`;
+        zone.style.width = `${width}%`;
+        zone.style.height = `${height}%`;
+        zone.dataset.x = x.toFixed(1);
+        zone.dataset.y = y.toFixed(1);
+        zone.dataset.width = width.toFixed(1);
+        zone.dataset.height = height.toFixed(1);
+        fields.x.value = x.toFixed(1);
+        fields.y.value = y.toFixed(1);
+        fields.width.value = width.toFixed(1);
+        fields.height.value = height.toFixed(1);
+        if (dirty) {
+            markDirty(zone);
+        }
+    }
+
+    function canvasPercent(event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: Math.max(0, Math.min(100, ((event.clientX - rect.left) / rect.width) * 100)),
+            y: Math.max(0, Math.min(100, ((event.clientY - rect.top) / rect.height) * 100)),
+        };
+    }
+
+    function removeDraft() {
+        if (draft) {
+            draft.remove();
+            draft = null;
+        }
+    }
+
+    canvas.addEventListener("click", (event) => {
+        const zone = event.target.closest(".floor-zone");
+        if (zone) {
+            if (movedDistance > 1.5) {
+                movedDistance = 0;
+                return;
+            }
+            selectZone(zone);
+        }
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+        const zone = event.target.closest(".floor-zone");
+        if (zone) {
+            event.preventDefault();
+            selectZone(zone);
+            activePointerId = event.pointerId;
+            movedDistance = 0;
+            const point = canvasPercent(event);
+            zone.setPointerCapture?.(event.pointerId);
+            const handle = event.target.closest(".resize-handle");
+            const base = {
+                pointerX: point.x,
+                pointerY: point.y,
+                zoneX: parseFloat(zone.dataset.x),
+                zoneY: parseFloat(zone.dataset.y),
+                width: parseFloat(zone.dataset.width),
+                height: parseFloat(zone.dataset.height),
+            };
+            if (handle) {
+                resizingZone = zone;
+                resizeStart = {...base, corner: handle.dataset.resize};
+            } else {
+                movingZone = zone;
+                moveStart = base;
+            }
+            return;
+        }
+        event.preventDefault();
+        removeDraft();
+        dragStart = canvasPercent(event);
+        draft = document.createElement("div");
+        draft.className = "floor-zone draft-zone";
+        canvas.appendChild(draft);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+        if (resizingZone && resizeStart) {
+            const current = canvasPercent(event);
+            const dx = current.x - resizeStart.pointerX;
+            const dy = current.y - resizeStart.pointerY;
+            movedDistance = Math.max(movedDistance, Math.abs(dx), Math.abs(dy));
+            let x = resizeStart.zoneX;
+            let y = resizeStart.zoneY;
+            let width = resizeStart.width;
+            let height = resizeStart.height;
+            if (resizeStart.corner.includes("e")) {
+                width = Math.min(100 - x, Math.max(minZoneSize, resizeStart.width + dx));
+            }
+            if (resizeStart.corner.includes("s")) {
+                height = Math.min(100 - y, Math.max(minZoneSize, resizeStart.height + dy));
+            }
+            if (resizeStart.corner.includes("w")) {
+                const right = resizeStart.zoneX + resizeStart.width;
+                x = Math.max(0, Math.min(right - minZoneSize, resizeStart.zoneX + dx));
+                width = right - x;
+            }
+            if (resizeStart.corner.includes("n")) {
+                const bottom = resizeStart.zoneY + resizeStart.height;
+                y = Math.max(0, Math.min(bottom - minZoneSize, resizeStart.zoneY + dy));
+                height = bottom - y;
+            }
+            applyZoneGeometry(resizingZone, x, y, width, height);
+            title.textContent = "Teglalap atmeretezese";
+            return;
+        }
+        if (movingZone && moveStart) {
+            const current = canvasPercent(event);
+            const dx = current.x - moveStart.pointerX;
+            const dy = current.y - moveStart.pointerY;
+            movedDistance = Math.max(movedDistance, Math.abs(dx), Math.abs(dy));
+            const x = Math.max(0, Math.min(100 - moveStart.width, moveStart.zoneX + dx));
+            const y = Math.max(0, Math.min(100 - moveStart.height, moveStart.zoneY + dy));
+            applyZoneGeometry(movingZone, x, y, moveStart.width, moveStart.height);
+            title.textContent = "Teglalap mozgatasa";
+            return;
+        }
+        if (!dragStart || !draft) {
+            return;
+        }
+        const current = canvasPercent(event);
+        const x = Math.min(dragStart.x, current.x);
+        const y = Math.min(dragStart.y, current.y);
+        const width = Math.abs(current.x - dragStart.x);
+        const height = Math.abs(current.y - dragStart.y);
+        draft.style.left = `${x}%`;
+        draft.style.top = `${y}%`;
+        draft.style.width = `${width}%`;
+        draft.style.height = `${height}%`;
+        fields.x.value = x.toFixed(1);
+        fields.y.value = y.toFixed(1);
+        fields.width.value = Math.max(width, 2).toFixed(1);
+        fields.height.value = Math.max(height, 2).toFixed(1);
+    });
+
+    window.addEventListener("pointerup", (event) => {
+        const activeZone = movingZone || resizingZone;
+        if (activeZone && activePointerId === event.pointerId && activeZone.hasPointerCapture?.(event.pointerId)) {
+            activeZone.releasePointerCapture(event.pointerId);
+        }
+        if (movingZone) {
+            movingZone = null;
+            moveStart = null;
+            if (title.textContent === "Teglalap mozgatasa") {
+                title.textContent = "Teglalap szerkesztese";
+            }
+        }
+        if (resizingZone) {
+            resizingZone = null;
+            resizeStart = null;
+            if (title.textContent === "Teglalap atmeretezese") {
+                title.textContent = "Teglalap szerkesztese";
+            }
+        }
+        activePointerId = null;
+        dragStart = null;
+        if (draft) {
+            setModeNew(false);
+            title.textContent = "Uj rajzolt teglalap";
+        }
+    });
+
+    fields.name.addEventListener("input", () => {
+        const zone = currentZone();
+        if (!zone) {
+            return;
+        }
+        zone.dataset.name = fields.name.value;
+        updateZoneLabel(zone);
+        markDirty(zone);
+    });
+
+    fields.roomId.addEventListener("change", () => {
+        const zone = currentZone();
+        if (!zone) {
+            return;
+        }
+        zone.dataset.roomId = fields.roomId.value;
+        zone.classList.toggle("is-bound", Boolean(fields.roomId.value));
+        zone.classList.toggle("is-open", !fields.roomId.value);
+        updateZoneLabel(zone);
+        markDirty(zone);
+    });
+
+    [fields.x, fields.y, fields.width, fields.height].forEach((field) => {
+        field.addEventListener("input", () => {
+            const zone = currentZone();
+            if (!zone) {
+                return;
+            }
+            const width = Math.max(minZoneSize, Math.min(100, parseFloat(fields.width.value) || minZoneSize));
+            const height = Math.max(minZoneSize, Math.min(100, parseFloat(fields.height.value) || minZoneSize));
+            const x = Math.max(0, Math.min(100 - width, parseFloat(fields.x.value) || 0));
+            const y = Math.max(0, Math.min(100 - height, parseFloat(fields.y.value) || 0));
+            applyZoneGeometry(zone, x, y, width, height);
+        });
+    });
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        removeDraft();
+        const zone = currentZone();
+        if (!zone) {
+            const body = new FormData(form);
+            const response = await fetch(createUrl, {
+                method: "POST",
+                body,
+                headers: {"X-Requested-With": "fetch", "Accept": "application/json"},
+            });
+            if (!response.ok) {
+                updateSaveStatus("Nem sikerult letrehozni a teglalapot.");
+                return;
+            }
+            const result = await response.json();
+            const createdZone = createZoneElement({
+                id: result.zone_id,
+                name: fields.name.value,
+                room_id: fields.roomId.value,
+                x: fields.x.value,
+                y: fields.y.value,
+                width: fields.width.value,
+                height: fields.height.value,
+            });
+            selectZone(createdZone);
+            clearDirty(createdZone);
+            updateSaveStatus("Teglalap letrehozva.");
+            setModeNew();
+            return;
+        }
+        zone.dataset.name = fields.name.value;
+        zone.dataset.roomId = fields.roomId.value;
+        updateZoneLabel(zone);
+        markDirty(zone);
+        await saveZones([zone]);
+    });
+
+    deleteForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const zone = currentZone();
+        if (!zone || !deleteForm.action) {
+            return;
+        }
+        const response = await fetch(deleteForm.action, {
+            method: "POST",
+            headers: {"X-Requested-With": "fetch", "Accept": "application/json"},
+        });
+        if (!response.ok) {
+            updateSaveStatus("Nem sikerult torolni a teglalapot.");
+            return;
+        }
+        dirtyZones.delete(zone.dataset.zoneId);
+        zone.remove();
+        setModeNew();
+        updateSaveStatus("Teglalap torolve.");
+    });
+
+    async function saveZones(zones) {
+        const payload = zones.map(zonePayload);
+        if (!payload.length) {
+            updateSaveStatus();
+            return;
+        }
+        saveAllButton.disabled = true;
+        saveStatus.textContent = "Mentes folyamatban...";
+        const response = await fetch(bulkUpdateUrl, {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "Accept": "application/json"},
+            body: JSON.stringify({zones: payload}),
+        });
+        if (!response.ok) {
+            updateSaveStatus("Nem sikerult menteni a floorplan modositast.");
+            return;
+        }
+        zones.forEach(clearDirty);
+        updateSaveStatus("Floorplan mentve.");
+    }
+
+    saveAllButton.addEventListener("click", async () => {
+        const zones = [...dirtyZones]
+            .map((id) => canvas.querySelector(`.floor-zone[data-zone-id="${id}"]`))
+            .filter(Boolean);
+        await saveZones(zones);
+    });
+
+    newButton.addEventListener("click", () => {
+        removeDraft();
+        setModeNew();
+    });
+
+    updateSaveStatus();
+})();
+</script>
 {% endblock %}

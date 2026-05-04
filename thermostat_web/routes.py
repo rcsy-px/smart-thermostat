@@ -1,6 +1,6 @@
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
-from .repository import BoilerRepository, RoomRepository, RuntimeRepository, SettingsRepository
+from .repository import BoilerRepository, FloorplanRepository, RoomRepository, RuntimeRepository, SettingsRepository
 from .services import ControllerService, DashboardService, OverrideService
 
 bp = Blueprint("web", __name__)
@@ -21,6 +21,21 @@ def _room_form_data(form) -> dict:
         "enabled": form.get("enabled") == "on",
         "learning_enabled": form.get("learning_enabled") == "on",
     }
+
+
+def _floorplan_form_data(form) -> dict:
+    return {
+        "name": form.get("name", "").strip(),
+        "room_id": form.get("room_id", "").strip(),
+        "x": form.get("x", "0").strip() or "0",
+        "y": form.get("y", "0").strip() or "0",
+        "width": form.get("width", "10").strip() or "10",
+        "height": form.get("height", "10").strip() or "10",
+    }
+
+
+def _wants_json() -> bool:
+    return request.headers.get("X-Requested-With") == "fetch" or request.accept_mimetypes.best == "application/json"
 
 
 @bp.route("/")
@@ -90,6 +105,38 @@ def update_boiler():
             "enabled": request.form.get("enabled") == "on",
         }
     )
+    return redirect(url_for("web.dashboard"))
+
+
+@bp.route("/floorplanes", methods=["POST"])
+def create_floorplan_zone():
+    zone_id = FloorplanRepository().create_zone(_floorplan_form_data(request.form))
+    if _wants_json():
+        return jsonify({"ok": True, "zone_id": zone_id})
+    return redirect(url_for("web.dashboard"))
+
+
+@bp.route("/floorplanes/<int:zone_id>", methods=["POST"])
+def update_floorplan_zone(zone_id: int):
+    FloorplanRepository().update_zone(zone_id, _floorplan_form_data(request.form))
+    if _wants_json():
+        return jsonify({"ok": True, "zone_id": zone_id})
+    return redirect(url_for("web.dashboard"))
+
+
+@bp.route("/floorplanes/bulk", methods=["POST"])
+def update_floorplan_zones():
+    payload = request.get_json(silent=True) or {}
+    zones = payload.get("zones", [])
+    FloorplanRepository().update_zones(zones)
+    return jsonify({"ok": True, "saved": len(zones)})
+
+
+@bp.route("/floorplanes/<int:zone_id>/delete", methods=["POST"])
+def delete_floorplan_zone(zone_id: int):
+    FloorplanRepository().delete_zone(zone_id)
+    if _wants_json():
+        return jsonify({"ok": True, "zone_id": zone_id})
     return redirect(url_for("web.dashboard"))
 
 

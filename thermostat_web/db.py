@@ -91,6 +91,19 @@ CREATE TABLE IF NOT EXISTS room_learning_profiles (
     FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS floorplan_zones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT '',
+    room_id INTEGER,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    width REAL NOT NULL,
+    height REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (room_id) REFERENCES rooms (id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS system_runtime (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     outdoor_entity_id TEXT,

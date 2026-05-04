@@ -2,13 +2,14 @@ from datetime import datetime, time as dt_time, timedelta
 from typing import Any
 
 from .ha import HomeAssistantClient
-from .repository import BoilerRepository, RoomRepository, RuntimeRepository, SettingsRepository
+from .repository import BoilerRepository, FloorplanRepository, RoomRepository, RuntimeRepository, SettingsRepository
 
 
 class DashboardService:
     def __init__(self):
         self.rooms = RoomRepository()
         self.boiler = BoilerRepository()
+        self.floorplan = FloorplanRepository()
         self.runtime = RuntimeRepository()
         self.settings = SettingsRepository()
 
@@ -34,6 +35,7 @@ class DashboardService:
             "active_room_count": len(active_rooms),
             "demanding_room_count": len(demanding_rooms),
             "boiler": self.boiler.get(),
+            "floorplan_zones": self.floorplan.list_zones(),
             "runtime": runtime,
             "settings": settings,
             "single_room_mode": len(active_rooms) <= 1,

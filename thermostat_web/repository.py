@@ -139,6 +139,90 @@ class BoilerRepository:
         get_db().commit()
 
 
+class FloorplanRepository:
+    def list_zones(self) -> list[dict]:
+        rows = get_db().execute(
+            """
+            SELECT f.*, r.name AS room_name, rr.last_temperature, rr.last_setpoint,
+                   rr.last_hysteresis, rr.last_call_for_heat, rr.last_valve_open,
+                   rr.last_decision_reason, rr.manual_override_mode, rr.manual_override_until,
+                   r.enabled AS room_enabled
+            FROM floorplan_zones f
+            LEFT JOIN rooms r ON r.id = f.room_id
+            LEFT JOIN room_runtime rr ON rr.room_id = r.id
+            ORDER BY f.id
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def create_zone(self, data: dict) -> int:
+        room_id = data.get("room_id") or None
+        cur = get_db().execute(
+            """
+            INSERT INTO floorplan_zones (name, room_id, x, y, width, height)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("name", "").strip(),
+                room_id,
+                float(data["x"]),
+                float(data["y"]),
+                float(data["width"]),
+                float(data["height"]),
+            ),
+        )
+        get_db().commit()
+        return cur.lastrowid
+
+    def update_zone(self, zone_id: int, data: dict):
+        room_id = data.get("room_id") or None
+        get_db().execute(
+            """
+            UPDATE floorplan_zones
+            SET name = ?, room_id = ?, x = ?, y = ?, width = ?, height = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                data.get("name", "").strip(),
+                room_id,
+                float(data["x"]),
+                float(data["y"]),
+                float(data["width"]),
+                float(data["height"]),
+                zone_id,
+            ),
+        )
+        get_db().commit()
+
+    def update_zones(self, zones: list[dict]):
+        db = get_db()
+        for zone in zones:
+            room_id = zone.get("room_id") or None
+            db.execute(
+                """
+                UPDATE floorplan_zones
+                SET name = ?, room_id = ?, x = ?, y = ?, width = ?, height = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    zone.get("name", "").strip(),
+                    room_id,
+                    float(zone["x"]),
+                    float(zone["y"]),
+                    float(zone["width"]),
+                    float(zone["height"]),
+                    int(zone["id"]),
+                ),
+            )
+        db.commit()
+
+    def delete_zone(self, zone_id: int):
+        get_db().execute("DELETE FROM floorplan_zones WHERE id = ?", (zone_id,))
+        get_db().commit()
+
+
 class RuntimeRepository:
     def get_system_runtime(self) -> dict:
         row = get_db().execute("SELECT * FROM system_runtime WHERE id = 1").fetchone()
